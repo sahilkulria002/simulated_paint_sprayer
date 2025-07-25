@@ -8,12 +8,12 @@ wp.init()
 _tex_a = wp.zeros(TEXTURE_RES * TEXTURE_RES, dtype=float)
 _tex_b = wp.zeros_like(_tex_a)
 
-# ---- Gaussian weights ----
+# Gaussian weights
 _radius = max(1, int(3 * GAUSS_SIGMA_PIX))
 xs = np.arange(-_radius, _radius + 1, dtype=np.float32)
 weights = np.exp(-0.5 * (xs / GAUSS_SIGMA_PIX) ** 2).astype(np.float32)
 weights /= weights.sum()
-_w_arr = wp.from_numpy(weights)          # <<< fix: avoids numpy copy issue
+_w_arr = wp.from_numpy(weights)
 W_LEN = weights.shape[0]
 
 @wp.kernel
@@ -27,11 +27,9 @@ def blur_h(tex_in: wp.array(dtype=float), tex_out: wp.array(dtype=float),
     for k in range(wlen):
         dx = k - radius
         xx = x + dx
-        if xx < 0:
-            xx = 0
-        elif xx >= w:
-            xx = w - 1
-        s += tex_in[y*w + xx] * weights[k]
+        if xx < 0: xx = 0
+        elif xx >= w: xx = w - 1
+        s += tex_in[y * w + xx] * weights[k]
     tex_out[tid] = s
 
 @wp.kernel
@@ -45,21 +43,17 @@ def blur_v(tex_in: wp.array(dtype=float), tex_out: wp.array(dtype=float),
     for k in range(wlen):
         dy = k - radius
         yy = y + dy
-        if yy < 0:
-            yy = 0
-        elif yy >= h:
-            yy = h - 1
-        s += tex_in[yy*w + x] * weights[k]
+        if yy < 0: yy = 0
+        elif yy >= h: yy = h - 1
+        s += tex_in[yy * w + x] * weights[k]
     tex_out[tid] = s
 
 @wp.kernel
 def clamp01(tex: wp.array(dtype=float)):
     tid = wp.tid()
     v = tex[tid]
-    if v < 0.0:
-        v = 0.0
-    elif v > 1.0:
-        v = 1.0
+    if v < 0.0: v = 0.0
+    elif v > 1.0: v = 1.0
     tex[tid] = v
 
 @wp.kernel

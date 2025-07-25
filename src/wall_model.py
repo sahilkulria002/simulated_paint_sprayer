@@ -1,10 +1,6 @@
 from pxr import Usd, UsdGeom, Gf, Vt
 import os, math
-from .config import (
-    WALL_W, WALL_H, WALL_D,
-    FAN_ANGLE_DEG, BRUSH_Y, BRUSH_Z,
-    OUT_DIR
-)
+from .config import WALL_W, WALL_H, WALL_D, FAN_ANGLE_DEG, BRUSH_Y, BRUSH_Z, OUT_DIR
 
 USD_PATH = os.path.join(OUT_DIR, "wall_template.usda")
 
@@ -13,24 +9,17 @@ def build_template():
     UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.z)
     UsdGeom.SetStageMetersPerUnit(stage, 1.0)
 
-    # wall
     wall = UsdGeom.Cube.Define(stage, "/Wall")
     wall.AddScaleOp().Set(Gf.Vec3d(WALL_W/2, WALL_D/2, WALL_H/2))
     wall.AddTranslateOp().Set(Gf.Vec3d(WALL_W/2, 0, WALL_H/2))
-    UsdGeom.Gprim(wall).GetDisplayColorAttr().Set(
-        Vt.Vec3fArray([Gf.Vec3f(1,1,1)])
-    )
+    UsdGeom.Gprim(wall).GetDisplayColorAttr().Set(Vt.Vec3fArray([Gf.Vec3f(1,1,1)]))
 
-    # nozzle body
     body = UsdGeom.Cylinder.Define(stage, "/NozzleBody")
     body.CreateHeightAttr(0.10)
     body.CreateRadiusAttr(0.03)
     body.AddTranslateOp().Set(Gf.Vec3d(0, BRUSH_Y, BRUSH_Z))
-    UsdGeom.Gprim(body).GetDisplayColorAttr().Set(
-        Vt.Vec3fArray([Gf.Vec3f(0.3,0.3,0.3)])
-    )
+    UsdGeom.Gprim(body).GetDisplayColorAttr().Set(Vt.Vec3fArray([Gf.Vec3f(0.3,0.3,0.3)]))
 
-    # visual fan cone
     base_rad = BRUSH_Y * math.tan(math.radians(FAN_ANGLE_DEG/2))
     cone = UsdGeom.Cone.Define(stage, "/SprayFan")
     cone.CreateHeightAttr(BRUSH_Y)
