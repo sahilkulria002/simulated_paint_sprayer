@@ -14,6 +14,8 @@ BRUSH_Z = 1.00       # nozzle height
 ROW_HEIGHT      = 0.15        # metres between passes
 PASS_SPEED_MPS  = 0.20        # nozzle travel speed (m / s) in X
 FPS             = 30          # simulation frames per second
+MAX_SAVED_FRAMES = 100
+
 
 
 OUT_DIR = "outputs"
@@ -23,3 +25,4 @@ OUT_DIR = "outputs"
 TOTAL_ROWS = int(np.ceil(WALL_H / ROW_HEIGHT))
 FRAMES_PER_PASS = int(np.ceil(WALL_W / (PASS_SPEED_MPS / FPS)))
 STEPS = TOTAL_ROWS * FRAMES_PER_PASS     # used everywhere else
+

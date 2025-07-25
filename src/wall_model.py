@@ -21,8 +21,9 @@ def build_template():
 
     # time‑sampled “spray gun” cylinder
     brush = UsdGeom.Cylinder.Define(stage, "/Brush")
-    brush.CreateRadiusAttr(0.05)
-    brush.AddScaleOp().Set(Gf.Vec3d(1,1,0.5))
+    brush.CreateRadiusAttr(0.05)   # 5 cm radius
+    brush.AddScaleOp().Set(Gf.Vec3d(1,1,0.25))   # 25 cm long
+
     t_op = brush.AddTranslateOp()
     # linear motion along X over STEPS frames
     from .config import STEPS
