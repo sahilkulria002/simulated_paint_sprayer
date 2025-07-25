@@ -19,11 +19,13 @@ FPS             = 30         # simulation timestep rate
 BRUSH_Y         = 0.30       # metres
 BRUSH_Z         = 1.00       # starting height (first row centre)
 
-
+# ---------- nozzle / fan ----------
+EDGE_MARGIN = BRUSH_Y * math.tan(math.radians(FAN_ANGLE_DEG / 2))
+# extra travel so spray covers edges
 
 # ------------ derived counts ------------
 TOTAL_ROWS      = math.ceil(WALL_H / ROW_HEIGHT)
-FRAMES_PER_PASS = math.ceil(WALL_W / (PASS_SPEED_MPS / FPS))
+FRAMES_PER_PASS = math.ceil((WALL_W + 2*EDGE_MARGIN)/(PASS_SPEED_MPS / FPS))
 STEPS           = TOTAL_ROWS * FRAMES_PER_PASS      # total sim steps
 
 # ------------ output control ------------
