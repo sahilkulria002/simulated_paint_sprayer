@@ -1,0 +1,24 @@
+# === Python artefacts ===
+__pycache__/
+*.py[cod]
+
+# === virtual‑env ===
+env/
+
+# === large, generated outputs ===
+outputs/
+*.png
+*.usda
+*.usd
+*.mp4
+*.avi
+*.gif
+
+# === IDE / editor files ===
+.vscode/
+.idea/
+*.sw?
+.DS_Store
+
+# === logs / misc ===
+*.log

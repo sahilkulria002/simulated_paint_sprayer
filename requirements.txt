@@ -1,0 +1,6 @@
+warp-lang==0.13.*
+usd-core==25.05
+numpy
+Pillow
+pytest
+scipy
