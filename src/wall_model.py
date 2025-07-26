@@ -2,7 +2,7 @@ from pxr import Usd, UsdGeom, Gf, Vt
 import os, math
 from .config import (
     WALL_W, WALL_H, WALL_D,
-    FAN_ANGLE_DEG, BRUSH_Y,
+    FAN_ANGLE_DEG, BRUSH_Y,VIS_CONE_HEIGHT, VIS_CONE_SPREAD_SCALE,
     OUT_DIR, STEPS, FRAMES_PER_PASS, SAVE_EVERY,
     ROW_HEIGHT,
     ARM_BASE_X, ARM_BASE_Z, LINK1_LEN, LINK2_LEN,
@@ -154,14 +154,15 @@ def build_template():
     _cyl_along_x(stage, "/World/ArmBasePos/ShoulderJoint/ElbowPos/ElbowJoint/NozzlePos/NozzleOrient/NozzleBody",
                  0.10, 0.03, (0.3,0.3,0.3))
 
-    base_rad = BRUSH_Y * math.tan(math.radians(FAN_ANGLE_DEG/2.0))
+    base_rad_vis = VIS_CONE_HEIGHT * math.tan(math.radians(FAN_ANGLE_DEG/2.0)) * VIS_CONE_SPREAD_SCALE
+
     cone = UsdGeom.Cone.Define(stage, "/World/ArmBasePos/ShoulderJoint/ElbowPos/ElbowJoint/NozzlePos/NozzleOrient/Fan")
     cone.CreateAxisAttr(UsdGeom.Tokens.x)
-    cone.CreateHeightAttr(BRUSH_Y)
-    cone.CreateRadiusAttr(base_rad)
-    cone.AddTranslateOp().Set(Gf.Vec3d(BRUSH_Y/2.0, 0, 0))
+    cone.CreateHeightAttr(VIS_CONE_HEIGHT)                 # decoupled from BRUSH_Y
+    cone.CreateRadiusAttr(base_rad_vis)
+    cone.AddTranslateOp().Set(Gf.Vec3d(VIS_CONE_HEIGHT/2.0, 0, 0))  # apex at nozzle
     g = UsdGeom.Gprim(cone)
-    g.GetDisplayColorAttr().Set(Vt.Vec3fArray([Gf.Vec3f(1,0,0)]))
+    g.GetDisplayColorAttr().Set(Vt.Vec3fArray([Gf.Vec3f(1, 0, 0)]))
     g.GetDisplayOpacityAttr().Set(Vt.FloatArray([0.15]))
 
     # Debug target

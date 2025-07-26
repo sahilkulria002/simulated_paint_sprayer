@@ -3,15 +3,22 @@ import math
 # -------- Wall --------
 WALL_W, WALL_H, WALL_D = 4.0, 2.0, 0.05   # metres
 # Small shift so wall is not exactly on the world YZ plane
-WALL_OFFSET_X = 0.05
+WALL_OFFSET_X = 0.5
 # Force elbow to bend 'up' (positive Z) rather than down
 ELBOW_UP = True
 
 
 # -------- Nozzle / Fan --------
 FAN_ANGLE_DEG = 30.0
-BRUSH_Y       = 0.45   # distance in front of wall (Y)
+BRUSH_Y       = 0.6   # distance in front of wall (Y)
 BRUSH_Z       = 1.00
+
+# --- Visual cone (for Blender only) ---
+# Nozzle-to-base length of the visible cone (must be < BRUSH_Y to not touch wall)
+VIS_CONE_HEIGHT       = 0.4    # in metres, e.g. 0.60 * BRUSH_Y if you like
+# Extra spread multiplier for the cone base radius (purely visual)
+VIS_CONE_SPREAD_SCALE = 0.8     # 1.0 = geometric, <1 tighter, >1 wider
+
 
 EDGE_MARGIN = BRUSH_Y * math.tan(math.radians(FAN_ANGLE_DEG / 2.0))
 
@@ -46,5 +53,24 @@ OUT_DIR          = "outputs"
 # -------- Arm geometry (long enough to reach every point) --------
 ARM_BASE_X = 0.0
 ARM_BASE_Z = 0.0
-LINK1_LEN  = 2.6    # total reach 4.7 m > wall diagonal 4.472 m
-LINK2_LEN  = 2.1
+LINK1_LEN  = 2.9    
+LINK2_LEN  = 2.6
+
+
+# --- Particle spray (Warp) ---
+PARTICLE_CAP       = 100_000   # big ring buffer
+EMIT_PER_STEP      = 1000
+PARTICLE_SPEED     = 6.0       # m/s mean exit speed
+GRAVITY_Y          = 9.81      # m/s^2
+AIR_DRAG           = 0.6       # 1/s  (higher = more slowing)
+FRESH_DECAY        = 0.88      # fresh layer fades each frame
+STICK_RADIUS_PIX_MIN = 1
+STICK_RADIUS_PIX_MAX = 3
+STICK_INTENSITY      = 1.0
+
+
+# -------- Visualization control --------
+VIEW_STRIDE = 1      # 1: save every step; 2: save every other step; etc.
+VIS_GAIN    = 4.0    # multiply paint layers before writing PNG (boost visibility)
+# Animation sampling stride inside USD template (keep 1 for smooth timeline)
+ANIM_SAMPLE_STRIDE = 1
