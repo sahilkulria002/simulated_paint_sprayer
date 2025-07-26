@@ -58,6 +58,22 @@ saved frame 001 (step 90/8749) coverage= 18.7%
 ✅ done. 100 frames in outputs/
 ```
 
+## ⚡ Quick Configuration
+
+### Essential Parameters for Fast Customization
+
+| Parameter | Description | Effect |
+|-----------|-------------|---------|
+| `ELLIPSE_RADIUS_PIX` | Spray pattern size | Increase to make sprayer cover larger area |
+| `VIEW_STRIDE` | Animation frame skipping | Increase to skip steps (faster preview) |
+| `ANIM_SAMPLE_STRIDE` | USD animation sampling | Should match VIEW_STRIDE for consistency |
+
+### Common Adjustments
+
+- **Wall Parameters**: Modify `WALL_W`, `WALL_H`, `WALL_D` in `config.py`
+- **Robot Dimensions**: Adjust `LINK1_LEN`, `LINK2_LEN` for arm reach
+- **Fast Preview**: Set `VIEW_STRIDE = 10` and `ANIM_SAMPLE_STRIDE = 10`
+
 ## 📁 Project Structure
 
 ```

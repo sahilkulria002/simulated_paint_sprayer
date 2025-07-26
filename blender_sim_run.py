@@ -4,7 +4,7 @@
 import bpy, os, re
 
 # --- Your setup (filled) ---
-OUTPUT_DIR_ABS = "/home/sahil/Desktop/simulation/paint_assignment_3/outputs"
+OUTPUT_DIR_ABS = "give path to output directory here"  
 WALL_NAME = "Wall"          # object created by the USD import
 EMISSIVE_STRENGTH = 1.0
 PATTERN = re.compile(r"mask_(\d{4})\.png$")
