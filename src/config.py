@@ -1,40 +1,46 @@
 import math
-import numpy as np
 
-# ---------------- WALL ----------------
-WALL_W, WALL_H, WALL_D = 4.0, 2.0, 0.05  # metres
+# -------- Wall --------
+WALL_W, WALL_H, WALL_D = 4.0, 2.0, 0.05   # metres
+# Wall lower-left corner at world origin (0,0,0)
 
-# ---------------- NOZZLE / FAN (width & range) ----------------
-FAN_ANGLE_DEG = 30.0    # full cone angle – bigger => wider spot
-BRUSH_Y       = 0.30    # nozzle distance from wall (m) – bigger => larger footprint
-BRUSH_Z       = 1.00    # starting height for first row (m)
+# -------- Nozzle / Fan --------
+FAN_ANGLE_DEG = 30.0
+BRUSH_Y       = 0.30   # distance in front of wall (Y)
+BRUSH_Z       = 1.00
 
-EDGE_MARGIN = BRUSH_Y * math.tan(math.radians(FAN_ANGLE_DEG / 2.0))  # overscan
+EDGE_MARGIN = BRUSH_Y * math.tan(math.radians(FAN_ANGLE_DEG / 2.0))
 
-# ---------------- SPRAY DENSITY ----------------
-BASE_RAYS_PER_STEP = 3000  # baseline rays per sim step
-BASE_INTENSITY     = 1.0   # paint per ray
-FALLOFF_POWER      = 2.0   # cos(theta)^power falloff
-DROPLET_R_MIN      = 1     # min splat radius (pixels)
-DROPLET_R_MAX      = 3     # max splat radius (pixels)
+# -------- Spray density --------
+BASE_RAYS_PER_STEP = 3000
+BASE_INTENSITY     = 1.0
+FALLOFF_POWER      = 2.0
+DROPLET_R_MIN      = 1
+DROPLET_R_MAX      = 3
 
-# ---------------- TEXTURE ----------------
+# -------- Texture / paint --------
 TEXTURE_RES     = 512
 GAUSS_SIGMA_PIX = 2
 COVER_THRESH    = 0.9
 
-# ---------------- RASTER PATH / SPEED ----------------
-ROW_HEIGHT     = 0.15   # m between vertical passes
-PASS_SPEED_MPS = 0.50   # default travel speed along X in m/s
-FPS            = 30     # sim framerate (steps/sec)
-REF_SPEED      = 0.20   # reference speed for density compensation
+# -------- Raster path / speed --------
+ROW_HEIGHT     = 0.15
+PASS_SPEED_MPS = 0.20
+FPS            = 30
+REF_SPEED      = 0.20
 
-# derived frame counts
+# Derived
 FRAMES_PER_PASS = math.ceil((WALL_W + 2 * EDGE_MARGIN) / (PASS_SPEED_MPS / FPS))
 TOTAL_ROWS      = math.ceil(WALL_H / ROW_HEIGHT)
 STEPS           = TOTAL_ROWS * FRAMES_PER_PASS
 
-# ---------------- OUTPUT CONTROL ----------------
+# -------- Output --------
 MAX_SAVED_FRAMES = 100
-SAVE_EVERY       = max(1, STEPS // MAX_SAVED_FRAMES) if (STEPS := STEPS) else 1  # ensure STEPS defined
+SAVE_EVERY       = max(1, STEPS // MAX_SAVED_FRAMES)
 OUT_DIR          = "outputs"
+
+# -------- Arm geometry (long enough to reach every point) --------
+ARM_BASE_X = 0.0
+ARM_BASE_Z = 0.0
+LINK1_LEN  = 2.6    # total reach 4.7 m > wall diagonal 4.472 m
+LINK2_LEN  = 2.1
