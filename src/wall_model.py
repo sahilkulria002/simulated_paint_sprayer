@@ -2,11 +2,11 @@ from pxr import Usd, UsdGeom, Gf, Vt
 import os, math
 from .config import (
     WALL_W, WALL_H, WALL_D,
-    FAN_ANGLE_DEG, BRUSH_Y,VIS_CONE_HEIGHT, VIS_CONE_SPREAD_SCALE,
+    FAN_ANGLE_DEG, BRUSH_Y, VIS_CONE_HEIGHT, VIS_CONE_SPREAD_SCALE,
     OUT_DIR, STEPS, FRAMES_PER_PASS, SAVE_EVERY,
-    ROW_HEIGHT, ANIM_SAMPLE_STRIDE,
+    ROW_HEIGHT, ANIM_SAMPLE_STRIDE, FPS,            # <- use FPS
     ARM_BASE_X, ARM_BASE_Z, LINK1_LEN, LINK2_LEN,
-    WALL_OFFSET_X, ELBOW_UP
+    WALL_OFFSET_X, ELBOW_UP, EDGE_MARGIN, TOTAL_ROWS
 )
 
 USD_PATH = os.path.join(OUT_DIR, "wall_template.usda")
@@ -16,21 +16,25 @@ def _nozzle_pose(frame: int):
     """Return (tx, tz) in wall-local coordinates:
        x in [0..WALL_W], z in [0..WALL_H], starting top-left,
        sweeping L->R, step down, R->L, etc."""
-    row  = frame // FRAMES_PER_PASS
+    # Clamp row to last valid row to avoid lingering sweeps at the bottom
+    row  = min(frame // FRAMES_PER_PASS, max(0, TOTAL_ROWS - 1))
     fin  = frame %  FRAMES_PER_PASS
     frac = 0.0 if FRAMES_PER_PASS <= 1 else fin / float(FRAMES_PER_PASS - 1)
 
-    # horizontal sweep on the wall
+    # horizontal sweep on the wall (include off-panel margin during motion,
+    # but clamp to the panel for the returned target)
+    x_lo = -EDGE_MARGIN
+    x_hi = WALL_W + EDGE_MARGIN
     if row % 2 == 0:
-        x = frac * WALL_W            # left -> right
+        x_m = x_lo + frac * (x_hi - x_lo)    # left -> right
     else:
-        x = (1.0 - frac) * WALL_W    # right -> left
+        x_m = x_hi - frac * (x_hi - x_lo)    # right -> left
+    x = max(0.0, min(WALL_W, x_m))
 
     # row center from top to bottom
     z_center = WALL_H - (row + 0.5) * ROW_HEIGHT
-    # clamp
-    if z_center < 0.0: z_center = 0.0
-    if z_center > WALL_H: z_center = WALL_H
+    # clamp into panel just in case
+    z_center = max(0.0, min(WALL_H, z_center))
 
     return x, z_center
 
@@ -93,10 +97,10 @@ def _make_wall_plane(stage):
     wall = UsdGeom.Mesh.Define(stage, "/Wall")
     x0 = WALL_OFFSET_X
     pts = [
-        Gf.Vec3f(x0 + 0.0, 0, 0.0),
-        Gf.Vec3f(x0 + WALL_W, 0, 0.0),
-        Gf.Vec3f(x0 + WALL_W, 0, WALL_H),
-        Gf.Vec3f(x0 + 0.0,   0, WALL_H),
+        Gf.Vec3f(x0 + 0.0,     0, 0.0),
+        Gf.Vec3f(x0 + WALL_W,  0, 0.0),
+        Gf.Vec3f(x0 + WALL_W,  0, WALL_H),
+        Gf.Vec3f(x0 + 0.0,     0, WALL_H),
     ]
     wall.CreatePointsAttr(pts)
     wall.CreateFaceVertexCountsAttr([4])
@@ -126,7 +130,8 @@ def build_template():
     r_sh = shoulder_joint.AddRotateYOp()
     shoulder_joint.SetXformOpOrder([r_sh])
 
-    _cyl_along_x(stage, "/World/ArmBasePos/ShoulderJoint/Link1Geom", LINK1_LEN, 0.04, (0.15,0.6,0.9))
+    _cyl_along_x(stage, "/World/ArmBasePos/ShoulderJoint/Link1Geom",
+                 LINK1_LEN, 0.04, (0.15,0.6,0.9))
 
     # Elbow position at end of link1
     elbow_pos = UsdGeom.Xform.Define(stage, "/World/ArmBasePos/ShoulderJoint/ElbowPos")
@@ -138,7 +143,8 @@ def build_template():
     r_el = elbow_joint.AddRotateYOp()
     elbow_joint.SetXformOpOrder([r_el])
 
-    _cyl_along_x(stage, "/World/ArmBasePos/ShoulderJoint/ElbowPos/ElbowJoint/Link2Geom", LINK2_LEN, 0.035, (0.2,0.8,0.3))
+    _cyl_along_x(stage, "/World/ArmBasePos/ShoulderJoint/ElbowPos/ElbowJoint/Link2Geom",
+                 LINK2_LEN, 0.035, (0.2,0.8,0.3))
 
     # Nozzle at end of link2
     nozzle_pos = UsdGeom.Xform.Define(stage, "/World/ArmBasePos/ShoulderJoint/ElbowPos/ElbowJoint/NozzlePos")
@@ -150,7 +156,7 @@ def build_template():
     r_or = nozzle_orient.AddRotateZOp(); r_or.Set(-90.0)
     nozzle_orient.SetXformOpOrder([r_or])
 
-    # Nozzle body & fan
+    # Nozzle body & fan (visual only)
     _cyl_along_x(stage, "/World/ArmBasePos/ShoulderJoint/ElbowPos/ElbowJoint/NozzlePos/NozzleOrient/NozzleBody",
                  0.10, 0.03, (0.3,0.3,0.3))
 
@@ -173,7 +179,7 @@ def build_template():
 
     # Time metadata (downsampled)
     frames_anim = (STEPS - 1) // ANIM_SAMPLE_STRIDE + 1
-    stage.SetTimeCodesPerSecond(24)
+    stage.SetTimeCodesPerSecond(FPS)
     stage.SetStartTimeCode(0)
     stage.SetEndTimeCode(frames_anim - 1)
 
@@ -182,7 +188,7 @@ def build_template():
         txw = WALL_OFFSET_X + tx                 # world
         tzw = tz
         a1, a_elbow = _solve_angles_world(txw, tzw)
-        r_sh.Set(-a1,     time=s)                # sign flip for +Z wall
+        r_sh.Set(-a1,      time=s)               # sign flip for +Z wall
         r_el.Set(-a_elbow, time=s)
         sph_t.Set(Gf.Vec3d(txw, BRUSH_Y, tzw), time=s)
 
