@@ -21,7 +21,12 @@ for f in range(STEPS):
     if f % SAVE_EVERY == 0 or f == STEPS - 1:
         tex = psw.download_mask()
         mask8 = (tex * 255).astype(np.uint8)
-        rgb = np.stack([255*np.ones_like(mask8), 255 - mask8, 255 - mask8], axis=2)
+
+        # RED = mask, background WHITE
+        r = mask8
+        g = 255 - mask8
+        b = 255 - mask8
+        rgb = np.stack([r, g, b], axis=2)
         png_path = os.path.join(OUT_DIR, f"mask_{saved:04d}.png")
         Image.fromarray(rgb).save(png_path)
 

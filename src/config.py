@@ -2,11 +2,15 @@ import math
 
 # -------- Wall --------
 WALL_W, WALL_H, WALL_D = 4.0, 2.0, 0.05   # metres
-# Wall lower-left corner at world origin (0,0,0)
+# Small shift so wall is not exactly on the world YZ plane
+WALL_OFFSET_X = 0.05
+# Force elbow to bend 'up' (positive Z) rather than down
+ELBOW_UP = True
+
 
 # -------- Nozzle / Fan --------
 FAN_ANGLE_DEG = 30.0
-BRUSH_Y       = 0.30   # distance in front of wall (Y)
+BRUSH_Y       = 0.45   # distance in front of wall (Y)
 BRUSH_Z       = 1.00
 
 EDGE_MARGIN = BRUSH_Y * math.tan(math.radians(FAN_ANGLE_DEG / 2.0))
