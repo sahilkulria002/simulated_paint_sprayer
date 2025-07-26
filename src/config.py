@@ -1,7 +1,7 @@
 import math
 
 # -------- Wall --------
-WALL_W, WALL_H, WALL_D = 4.0, 2.0, 0.05   # metres
+WALL_W, WALL_H, WALL_D = 1.0, 1.0, 0.05   # metres
 # Small shift so wall is not exactly on the world YZ plane
 WALL_OFFSET_X = 0.5
 # Force elbow to bend 'up' (positive Z) rather than down
@@ -70,7 +70,7 @@ STICK_INTENSITY      = 1.0
 
 
 # -------- Visualization control --------
-VIEW_STRIDE = 1      # 1: save every step; 2: save every other step; etc.
-VIS_GAIN    = 4.0    # multiply paint layers before writing PNG (boost visibility)
+VIEW_STRIDE = 30     # 1: save every step; 2: save every other step; etc.
+VIS_GAIN    = 1.0    # multiply paint layers before writing PNG (boost visibility)
 # Animation sampling stride inside USD template (keep 1 for smooth timeline)
-ANIM_SAMPLE_STRIDE = 1
+ANIM_SAMPLE_STRIDE = 3

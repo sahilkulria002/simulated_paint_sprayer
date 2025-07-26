@@ -1,42 +1,65 @@
 #!/usr/bin/env python3
 import os
-os.environ["WARP_DISABLE_CUDA"] = "1"   # << force CPU-only
+# Force Warp to CPU only
+os.environ["WARP_DISABLE_CUDA"] = "1"
 
 import numpy as np
 from PIL import Image
-from src.config import OUT_DIR, STEPS, SAVE_EVERY, WALL_OFFSET_X
+
+from src.config import (
+    OUT_DIR, STEPS, VIEW_STRIDE, WALL_OFFSET_X,
+)
 from src import wall_model
 from src import paint_surface_warp as psw
 from src import particle_paint as pp
 from src import visualize
 
-os.makedirs(OUT_DIR, exist_ok=True)
+def main():
+    os.makedirs(OUT_DIR, exist_ok=True)
 
-base_stage = wall_model.build_template()
-psw.clear_mask()
+    # Build the template once (it already contains full joint animation)
+    base_stage = wall_model.build_template()
 
-saved = 0
-for f in range(STEPS):
-    tx, tz = wall_model._nozzle_pose(f)
-    txw = WALL_OFFSET_X + tx
-    tzw = tz
+    # Clear paint layers
+    psw.clear_mask()
 
-    pp.step_emit_and_sim(f, txw, tzw)
+    saved = 0
+    pngs = []
 
-    psw.gaussian_blur_both()
-    psw.decay_fresh()
-    psw.clamp_both()
+    for f in range(STEPS):
+        # Wall-local target -> world X with offset
+        tx, tz = wall_model._nozzle_pose(f)
+        txw = WALL_OFFSET_X + tx
+        tzw = tz
 
-    if f % SAVE_EVERY == 0 or f == STEPS - 1:
-        r, g, b = psw.download_rgb()
-        rgb = np.stack([r, g, b], axis=2)
-        png_path = os.path.join(OUT_DIR, f"mask_{saved:04d}.png")
-        Image.fromarray(rgb).save(png_path)
+        # Physics: emit + integrate + deposit to layers (CPU Warp)
+        pp.step_emit_and_sim(f, float(txw), float(tzw))
 
-        visualize.write_frame(base_stage, png_path, saved)
+        # Overspray / drying / clamp
+        psw.gaussian_blur_both()
+        psw.decay_fresh()
+        psw.clamp_both()
 
-        cov = psw.coverage_percent()
-        print(f"saved frame {saved:03d} (step {f}/{STEPS-1}) coverage={cov:5.1f}%")
-        saved += 1
+        # Save on stride
+        if (f % VIEW_STRIDE == 0) or (f == STEPS - 1):
+            r, g, b = psw.download_rgb()
+            rgb = np.stack([r, g, b], axis=2)
+            png_path = os.path.join(OUT_DIR, f"mask_{saved:04d}.png")
+            Image.fromarray(rgb).save(png_path)
+            pngs.append(png_path)
 
-print(f"\n✅ done. {saved} frames in {OUT_DIR}/")
+            visualize.write_frame(base_stage, png_path, saved)
+
+            cov = psw.coverage_percent()
+            print(f"saved frame {saved:03d} (step {f}/{STEPS-1}) coverage={cov:5.1f}%")
+            saved += 1
+
+    # One animated USD that swaps textures over time
+    visualize.write_anim(base_stage, pngs, out_name="paint_anim.usda")
+
+    print(f"\n✅ done. {saved} frames in {OUT_DIR}/")
+    print("   - Per-frame USDs: frame_0000.usda ...")
+    print("   - Animated USD:  paint_anim.usda (scrub to see paint evolve)")
+
+if __name__ == "__main__":
+    main()

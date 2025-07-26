@@ -4,7 +4,7 @@ from .config import (
     WALL_W, WALL_H, WALL_D,
     FAN_ANGLE_DEG, BRUSH_Y,VIS_CONE_HEIGHT, VIS_CONE_SPREAD_SCALE,
     OUT_DIR, STEPS, FRAMES_PER_PASS, SAVE_EVERY,
-    ROW_HEIGHT,
+    ROW_HEIGHT, ANIM_SAMPLE_STRIDE,
     ARM_BASE_X, ARM_BASE_Z, LINK1_LEN, LINK2_LEN,
     WALL_OFFSET_X, ELBOW_UP
 )
@@ -172,19 +172,18 @@ def build_template():
     sph_t = sphere.AddTranslateOp(); sphere.SetXformOpOrder([sph_t])
 
     # Time metadata (downsampled)
-    frames_saved = (STEPS - 1) // SAVE_EVERY + 1
+    frames_anim = (STEPS - 1) // ANIM_SAMPLE_STRIDE + 1
     stage.SetTimeCodesPerSecond(24)
     stage.SetStartTimeCode(0)
-    stage.SetEndTimeCode(frames_saved - 1)
+    stage.SetEndTimeCode(frames_anim - 1)
 
-    # Animate: target is the *shifted* wall point
-    for s, f in enumerate(range(0, STEPS, SAVE_EVERY)):
-        tx, tz = _nozzle_pose(f)                    # wall-local
-        txw = WALL_OFFSET_X + tx                    # world x on the shifted wall
+    for s, f in enumerate(range(0, STEPS, ANIM_SAMPLE_STRIDE)):
+        tx, tz = _nozzle_pose(f)                 # wall-local
+        txw = WALL_OFFSET_X + tx                 # world
         tzw = tz
-        sh_deg, el_deg = _solve_angles_world(txw, tzw)
-        r_sh.Set(-sh_deg, time=s)
-        r_el.Set(-el_deg, time=s)
+        a1, a_elbow = _solve_angles_world(txw, tzw)
+        r_sh.Set(-a1,     time=s)                # sign flip for +Z wall
+        r_el.Set(-a_elbow, time=s)
         sph_t.Set(Gf.Vec3d(txw, BRUSH_Y, tzw), time=s)
 
     stage.GetRootLayer().Save()
