@@ -1,6 +1,9 @@
 import numpy as np
 import warp as wp
-from .config import TEXTURE_RES, GAUSS_SIGMA_PIX, COVER_THRESH, FRESH_DECAY, VIS_GAIN
+from .config import (
+    TEXTURE_RES, GAUSS_SIGMA_PIX, COVER_THRESH, FRESH_DECAY, VIS_GAIN,
+    EMIT_PER_STEP, REF_EMIT_PER_STEP, COLOR_DENSITY_EXP,
+)
 
 wp.init()
 device = "cpu"
@@ -9,13 +12,19 @@ W = TEXTURE_RES
 H = TEXTURE_RES
 N = W * H
 
-_tex_accum = wp.zeros(N, dtype=wp.float32, device=device)  # accumulated (red)
-_tex_fresh = wp.zeros(N, dtype=wp.float32, device=device)  # fresh (blue)
+_tex_accum = wp.zeros(N, dtype=wp.float32, device=device)  # accumulated
+_tex_fresh = wp.zeros(N, dtype=wp.float32, device=device)  # per-step
 
-_radius = max(1, int(3 * GAUSS_SIGMA_PIX))
-xs = np.arange(-_radius, _radius + 1, dtype=np.float32)
-weights = np.exp(-0.5 * (xs / GAUSS_SIGMA_PIX) ** 2).astype(np.float32)
-weights /= weights.sum()
+# ---- Gaussian weights ----
+if GAUSS_SIGMA_PIX <= 0:
+    _radius = 0
+    weights = np.array([1.0], dtype=np.float32)
+else:
+    _radius = max(1, int(3 * GAUSS_SIGMA_PIX))
+    xs = np.arange(-_radius, _radius + 1, dtype=np.float32)
+    weights = np.exp(-0.5 * (xs / GAUSS_SIGMA_PIX) ** 2).astype(np.float32)
+    weights /= weights.sum()
+
 _w = wp.from_numpy(weights, dtype=wp.float32, device=device)
 W_LEN = int(weights.shape[0])
 
@@ -79,11 +88,11 @@ def clear_mask():
     _tex_fresh.zero_()
 
 def gaussian_blur_both():
+    if W_LEN == 1:  # no-op
+        return
     tmp = wp.zeros_like(_tex_accum)
-    # accum
     wp.launch(blur_h, dim=N, device=device, inputs=[_tex_accum, tmp, W, H, _radius, _w, W_LEN])
     wp.launch(blur_v, dim=N, device=device, inputs=[tmp, _tex_accum, W, H, _radius, _w, W_LEN])
-    # fresh
     wp.launch(blur_h, dim=N, device=device, inputs=[_tex_fresh, tmp, W, H, _radius, _w, W_LEN])
     wp.launch(blur_v, dim=N, device=device, inputs=[tmp, _tex_fresh, W, H, _radius, _w, W_LEN])
 
@@ -95,20 +104,35 @@ def clamp_both():
     wp.launch(clamp01, dim=N, device=device, inputs=[_tex_fresh])
 
 def download_rgb():
+    """Blend red paint over a chosen background (gray/white/black)."""
+    from .config import PNG_BG_MODE, PNG_BG_GRAY
     acc = _tex_accum.numpy().astype(np.float32).reshape(H, W)
-    fr  = _tex_fresh.numpy().astype(np.float32).reshape(H, W)
 
-    # Apply gain for visibility
-    acc = np.clip(acc * np.float32(VIS_GAIN), 0.0, 1.0)
-    fr  = np.clip(fr  * np.float32(VIS_GAIN), 0.0, 1.0)
+    # density scaling
+    dens = (float(EMIT_PER_STEP) / max(1.0, float(REF_EMIT_PER_STEP))) ** float(COLOR_DENSITY_EXP)
+    acc = np.clip(acc * np.float32(VIS_GAIN) * np.float32(dens), 0.0, 1.0)
 
-    acc8 = (acc * 255.0).astype(np.uint8)
-    fr8  = (fr  * 255.0).astype(np.uint8)
+    # background RGB in [0,1]
+    if PNG_BG_MODE == "white":
+        bg = np.array([1.0, 1.0, 1.0], dtype=np.float32)
+    elif PNG_BG_MODE == "black":
+        bg = np.array([0.0, 0.0, 0.0], dtype=np.float32)
+    else:  # gray
+        g = np.float32(PNG_BG_GRAY)
+        bg = np.array([g, g, g], dtype=np.float32)
 
-    r = acc8                               # accumulated -> red
-    g = (255 - acc8).astype(np.uint8)      # contrast in green
-    b = fr8                                # fresh -> blue
-    return r, g, b
+    # paint color is pure red
+    paint = np.array([1.0, 0.0, 0.0], dtype=np.float32)
+
+    # linear blend: out = (1-acc)*bg + acc*paint
+    acc3 = acc[..., None]
+    out = (1.0 - acc3) * bg + acc3 * paint
+    out = np.clip(out * 255.0 + 0.5, 0.0, 255.0).astype(np.uint8)
+
+    r8, g8, b8 = out[..., 0], out[..., 1], out[..., 2]
+    return r8, g8, b8
+
+
 
 def coverage_percent():
     counter = wp.zeros(1, dtype=int, device=device)
